@@ -112,4 +112,31 @@ describe("Liquidity Deposit and Reward Protocol", () => {
       expect(history).toEqual(mockHistory);
     });
   });
+  describe("Staff Reward", () => {
+    it("should reward staff with liquidity", async () => {
+      const user = "user1";
+      mockContract.getLiquidity.mockResolvedValue(5000);
+      mockContract.rewardStaff.mockResolvedValue({
+        success: true,
+        reward: 5100,
+      });
+
+      const result = await mockContract.rewardStaff(user);
+      expect(result.success).toBe(true);
+      expect(result.reward).toBe(5100);
+    });
+
+    it("should not reward staff without liquidity", async () => {
+      const user = "user2";
+      mockContract.getLiquidity.mockResolvedValue(0);
+      mockContract.rewardStaff.mockResolvedValue({
+        success: false,
+        message: "Staff has no liquidity to reward.",
+      });
+
+      const result = await mockContract.rewardStaff(user);
+      expect(result.success).toBe(false);
+      expect(result.message).toBe("Staff has no liquidity to reward.");
+    });
+  });
 });
