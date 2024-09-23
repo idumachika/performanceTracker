@@ -57,4 +57,35 @@
   )
 )
 
+;; Deposit liquidity into the protocol
+(define-public (deposit-liquidity (staff-id principal) (amount uint))
+  (begin
+    (if (is-authorized tx-sender)
+      (if (and (> amount MIN_DEPOSIT_PER_TX) (<= amount MAX_DEPOSIT_PER_TX))
+        (begin
+          ;; Transfer STX to the contract
+          (try! (stx-transfer? amount tx-sender (as-contract tx-sender)))
+          ;; Update the staff's liquidity balance
+          (let ((existing-liquidity (default-to u0 (get total-liquidity (map-get? liquidity-pool {staff-id: staff-id})))))
+            (map-set liquidity-pool
+              {staff-id: staff-id}
+              {total-liquidity: (+ existing-liquidity amount)}))
+          ;; Log the deposit in history
+          (let ((current-counter (var-get deposit-counter)))
+            (map-insert deposit-history
+              {staff-id: staff-id, deposit-id: current-counter}
+              {amount: amount, deposited-by: tx-sender, date: block-height})
+            (var-set deposit-counter (+ current-counter u1)))
+          ;; Return success message
+          (ok {message: "Liquidity deposited successfully.", status: "success"})
+        )
+        ;; Return an error for invalid deposit amount
+        (err u1)
+      )
+      ;; Return an error for unauthorized access
+      (err u2)
+    )
+  )
+)
+
 
