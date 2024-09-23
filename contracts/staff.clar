@@ -11,11 +11,17 @@
 (define-constant ROLE_ADMIN "admin")
 (define-constant ROLE_MANAGER "manager")
 (define-constant ROLE_HR "HR")
+(define-constant WITHDRAWAL_COOLDOWN u144) 
 
 ;; Liquidity pool for tracking staff deposits
 (define-map liquidity-pool
   {staff-id: principal}
   {total-liquidity: uint})
+
+;; New map to track last withdrawal timestamp for each staff member
+(define-map last-withdrawal
+  {staff-id: principal}
+  {block-height: uint})
 
 ;; Deposit history for auditing liquidity deposits
 (define-map deposit-history
@@ -115,6 +121,57 @@
         (ok (tuple (staff-id staff-id) (reward (+ liquidity u100))))
       )
       (err "Staff has no liquidity to reward.")
+    )
+  )
+)
+
+;; Withdraw liquidity from the protocol
+(define-public (withdraw-liquidity (amount uint))
+  (let (
+    (staff-id tx-sender)
+    (current-liquidity (default-to u0 (get total-liquidity (map-get? liquidity-pool {staff-id: staff-id}))))
+    (last-withdrawal-height (default-to u0 (get block-height (map-get? last-withdrawal {staff-id: staff-id}))))
+  )
+    (if (and 
+         (<= amount current-liquidity)
+         (>= amount MIN_DEPOSIT_PER_TX)
+         (<= amount MAX_DEPOSIT_PER_TX)
+         (> (- block-height last-withdrawal-height) WITHDRAWAL_COOLDOWN))
+      (begin
+        ;; Transfer STX from the contract to the staff member
+        (try! (as-contract (stx-transfer? amount (as-contract tx-sender) staff-id)))
+        ;; Update the staff's liquidity balance
+        (map-set liquidity-pool
+          {staff-id: staff-id}
+          {total-liquidity: (- current-liquidity amount)})
+        ;; Update the last withdrawal timestamp
+        (map-set last-withdrawal
+          {staff-id: staff-id}
+          {block-height: block-height})
+        ;; Log the withdrawal in history
+        (let ((current-counter (var-get deposit-counter)))
+          (map-insert deposit-history
+            {staff-id: staff-id, deposit-id: current-counter}
+            {amount: (- u0 amount), deposited-by: tx-sender, date: block-height})
+          (var-set deposit-counter (+ current-counter u1)))
+        ;; Return success message
+        (ok {message: "Liquidity withdrawn successfully.", status: "success"})
+      )
+      ;; Return an error for invalid withdrawal conditions
+      (err u3)
+    )
+  )
+)
+
+;; Get time until next allowed withdrawal
+(define-read-only (time-to-next-withdrawal (staff-id principal))
+  (let (
+    (last-withdrawal-height (default-to u0 (get block-height (map-get? last-withdrawal {staff-id: staff-id}))))
+    (blocks-since-last-withdrawal (- block-height last-withdrawal-height))
+  )
+    (if (>= blocks-since-last-withdrawal WITHDRAWAL_COOLDOWN)
+      (ok u0)
+      (ok (- WITHDRAWAL_COOLDOWN blocks-since-last-withdrawal))
     )
   )
 )
