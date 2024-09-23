@@ -87,5 +87,23 @@
     )
   )
 )
+;; Retrieve liquidity balance for a staff
+(define-read-only (get-liquidity (staff-id principal))
+  (match (map-get? liquidity-pool {staff-id: staff-id})
+    some-liquidity
+    (ok (get total-liquidity some-liquidity))
+    (ok u0) ;; If no liquidity is found, return 0
+  )
+)
+
+;; Retrieve deposit history
+(define-read-only (get-deposit-history (staff-id principal) (deposit-id uint))
+  (match (map-get? deposit-history {staff-id: staff-id, deposit-id: deposit-id})
+    some-deposit
+    (ok some-deposit)
+    (err "No deposit record found.")
+  )
+)
+
 
 
