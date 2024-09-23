@@ -176,5 +176,23 @@
   )
 )
 
+;; Get withdrawal info
+(define-read-only (get-withdrawal-info (staff-id principal))
+  (let (
+    (current-liquidity (default-to u0 (get total-liquidity (map-get? liquidity-pool {staff-id: staff-id}))))
+    (last-withdrawal-height (default-to u0 (get block-height (map-get? last-withdrawal {staff-id: staff-id}))))
+    (blocks-since-last-withdrawal (- block-height last-withdrawal-height))
+  )
+    (ok {
+      available-balance: current-liquidity,
+      cooldown-blocks-remaining: (if (>= blocks-since-last-withdrawal WITHDRAWAL_COOLDOWN)
+                                    u0
+                                    (- WITHDRAWAL_COOLDOWN blocks-since-last-withdrawal)),
+      min-withdrawal: MIN_DEPOSIT_PER_TX,
+      max-withdrawal: (min MAX_DEPOSIT_PER_TX current-liquidity)
+    })
+  )
+)
+
 
 

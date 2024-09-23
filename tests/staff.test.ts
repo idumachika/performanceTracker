@@ -8,6 +8,9 @@ const mockContract = {
   getLiquidity: vi.fn(),
   getDepositHistory: vi.fn(),
   rewardStaff: vi.fn(),
+  withdrawLiquidity: vi.fn(),
+  timeToNextWithdrawal: vi.fn(),
+  getWithdrawalInfo: vi.fn(),
 };
 
 describe("Liquidity Deposit and Reward Protocol", () => {
@@ -137,6 +140,66 @@ describe("Liquidity Deposit and Reward Protocol", () => {
       const result = await mockContract.rewardStaff(user);
       expect(result.success).toBe(false);
       expect(result.message).toBe("Staff has no liquidity to reward.");
+    });
+  });
+
+  describe("Withdrawal", () => {
+    it("should withdraw liquidity successfully", async () => {
+      const user = "user1";
+      const amount = 500;
+
+      mockContract.withdrawLiquidity.mockResolvedValue({
+        success: true,
+        message: "Liquidity withdrawn successfully.",
+        status: "success",
+      });
+
+      const result = await mockContract.withdrawLiquidity(user, amount);
+      expect(result.success).toBe(true);
+      expect(result.message).toBe("Liquidity withdrawn successfully.");
+      expect(result.status).toBe("success");
+    });
+
+    it("should fail withdrawal if conditions are not met", async () => {
+      const user = "user1";
+      const amount = 20000; // Exceeds maximum allowed
+
+      mockContract.withdrawLiquidity.mockResolvedValue({
+        success: false,
+        error: "Withdrawal conditions not met",
+      });
+
+      const result = await mockContract.withdrawLiquidity(user, amount);
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("Withdrawal conditions not met");
+    });
+
+    it("should return correct time to next withdrawal", async () => {
+      const user = "user1";
+
+      mockContract.timeToNextWithdrawal.mockResolvedValue({
+        blocksRemaining: 50,
+      });
+
+      const result = await mockContract.timeToNextWithdrawal(user);
+      expect(result.blocksRemaining).toBe(50);
+    });
+
+    it("should return correct withdrawal info", async () => {
+      const user = "user1";
+
+      mockContract.getWithdrawalInfo.mockResolvedValue({
+        availableBalance: 3000,
+        cooldownBlocksRemaining: 0,
+        minWithdrawal: 100,
+        maxWithdrawal: 3000,
+      });
+
+      const info = await mockContract.getWithdrawalInfo(user);
+      expect(info.availableBalance).toBe(3000);
+      expect(info.cooldownBlocksRemaining).toBe(0);
+      expect(info.minWithdrawal).toBe(100);
+      expect(info.maxWithdrawal).toBe(3000);
     });
   });
 });
