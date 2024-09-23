@@ -105,5 +105,19 @@
   )
 )
 
+;; Reward staff based on liquidity deposits
+(define-public (reward-staff (staff-id principal))
+  (let ((liquidity (default-to u0 (get total-liquidity (map-get? liquidity-pool {staff-id: staff-id})))))
+    (if (> liquidity u0)
+      (begin
+        ;; Logic for rewarding the staff based on their liquidity (e.g., distribute tokens)
+        ;; Example: Send tokens based on liquidity balance
+        (ok (tuple (staff-id staff-id) (reward (+ liquidity u100))))
+      )
+      (err "Staff has no liquidity to reward.")
+    )
+  )
+)
+
 
 
