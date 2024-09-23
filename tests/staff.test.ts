@@ -96,4 +96,20 @@ describe("Liquidity Deposit and Reward Protocol", () => {
       expect(balance).toBe(3000);
     });
   });
+  describe("Deposit History", () => {
+    it("should retrieve deposit history", async () => {
+      const user = "user1";
+      const depositId = 1;
+      const mockHistory = {
+        amount: 1000,
+        depositedBy: "admin",
+        date: 123456789,
+      };
+
+      mockContract.getDepositHistory.mockResolvedValue(mockHistory);
+
+      const history = await mockContract.getDepositHistory(user, depositId);
+      expect(history).toEqual(mockHistory);
+    });
+  });
 });
