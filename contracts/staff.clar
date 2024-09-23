@@ -189,7 +189,9 @@
                                     u0
                                     (- WITHDRAWAL_COOLDOWN blocks-since-last-withdrawal)),
       min-withdrawal: MIN_DEPOSIT_PER_TX,
-      max-withdrawal: (min MAX_DEPOSIT_PER_TX current-liquidity)
+      max-withdrawal: (if (<= current-liquidity MAX_DEPOSIT_PER_TX)
+                          current-liquidity
+                          MAX_DEPOSIT_PER_TX)
     })
   )
 )
